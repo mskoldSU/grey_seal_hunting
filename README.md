@@ -3,7 +3,7 @@ Baltic sea grey seal population
 ================
 
 This repository contains code and data for reproducing the results in
-Report X:2021, Department of Environmental Research and Monitoring,
+Report X:2022, Department of Environmental Research and Monitoring,
 Swedish Museum of Natural History.
 
 ## Data
@@ -117,7 +117,8 @@ setting ages 1-3 to zero.
 library(mgcv)
 repro_fit <- gam(reproduce ~ s(age, bs = "cs"), family = "binomial", 
                  data = filter(reproduction, source == "hunted"))
-plot(repro_fit, trans = function(x) exp(x)/(1 + exp(x)), xlim = c(0, 35))
+intercept <- repro_fit$coefficients["(Intercept)"]
+plot(repro_fit, trans = function(x) exp(x + intercept)/(1 + exp(x + intercept)), xlim = c(0, 35))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
@@ -176,8 +177,9 @@ If we now assume survival to equal the above value for all classes but
 the first (which we term juvenile survival) we may now estimate juvenile
 survival and stable age-structure as follows:
 
-First we parametrise a Leslie matrix as a function of juvenile survival
-based on adult survival and reproduction *b* estimated above:
+First we parametrise a Leslie matrix *L* as a function of juvenile
+survival *sJ* based on adult survival *sA* and reproduction *b*
+estimated above:
 
 ``` r
 L <- function(sJ){
@@ -201,8 +203,8 @@ sJ
 
 ``` r
 stable <- popbio::stable.stage(L(sJ))
-barplot(stable ~ age, main = "Stable age distribution, female grey seal", 
-        data = tibble(stable=stable, age = 0:45))
+barplot(proportion ~ age, main = "Stable age distribution, female grey seal", 
+        data = tibble(proportion=stable, age = 0:45))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
@@ -210,7 +212,7 @@ barplot(stable ~ age, main = "Stable age distribution, female grey seal",
 ### Age-summaries
 
 As input for the population model, we compile a range of age-related
-proportions. First age-structures among hunted
+proportions. First age-structures among hunted animals
 
 ``` r
 agedist_hunted <- ages %>% 
@@ -227,7 +229,9 @@ barplot(cbind(fi_hunted, se_hunted) ~ age, data = agedist_hunted, beside = TRUE,
 
 where we note that it is more common to shoot pups in Finland. Then we
 use the stable age distribution and age-structures of bycaught to
-compute the ratio needed for age-specific bycatch-probabilities
+compute the ratio needed for age-specific bycatch-probabilities, assumed
+constant over stages pup (age 0), subadult (age 1-4) and adult (older
+than 4)
 
 ``` r
 bycaught_ratio <- tibble(
